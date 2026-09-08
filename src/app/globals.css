@@ -135,15 +135,8 @@ body {
   width: 100%;
   top: 0;
   left: 0;
-}
-
-/* Center the app layout like a phone */
-#__next,
-body > div:first-child {
   display: flex;
   justify-content: center;
-  height: 100%;
-  width: 100%;
 }
 
 a {
