@@ -1,0 +1,36 @@
+.content {
+  height: 100%;
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+  padding-bottom: calc(var(--tab-bar-height) + var(--safe-bottom) + 8px);
+}
+
+.tabBar {
+  background: rgba(13, 13, 15, 0.85) !important;
+}
+
+.tabLink {
+  position: relative;
+  transition: all var(--duration-fast) var(--ease-in-out);
+}
+
+.tabIcon {
+  transition: all var(--duration-fast) var(--ease-in-out);
+}
+
+.tabIconActive {
+  filter: drop-shadow(0 0 6px rgba(171, 159, 242, 0.4));
+  transition: all var(--duration-fast) var(--ease-in-out);
+}
+
+.activeIndicator {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 20px;
+  height: 2px;
+  background: var(--brand-primary);
+  border-radius: 0 0 var(--radius-full) var(--radius-full);
+}

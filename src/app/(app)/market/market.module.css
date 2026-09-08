@@ -1,0 +1,238 @@
+.page {
+  padding-top: calc(var(--safe-top) + var(--space-4));
+}
+
+.header {
+  padding: 0 var(--space-4) var(--space-4);
+}
+
+.title {
+  font-size: var(--font-2xl);
+  font-weight: 700;
+}
+
+/* Global Stats */
+.globalStats {
+  display: flex;
+  gap: var(--space-3);
+  padding: 0 var(--space-4) var(--space-4);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.globalStats::-webkit-scrollbar {
+  display: none;
+}
+
+.globalStat {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  background: var(--bg-card);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-primary);
+  min-width: 140px;
+}
+
+.globalLabel {
+  font-size: var(--font-xs);
+  color: var(--text-secondary);
+}
+
+.globalValue {
+  font-size: var(--font-sm);
+  font-weight: 600;
+}
+
+/* Trending */
+.trendingSection {
+  padding: 0 0 var(--space-4);
+}
+
+.sectionHeader {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 0 var(--space-4) var(--space-3);
+  font-size: var(--font-base);
+  font-weight: 600;
+  color: var(--brand-primary);
+}
+
+.trendingScroll {
+  display: flex;
+  gap: var(--space-3);
+  padding: 0 var(--space-4);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.trendingScroll::-webkit-scrollbar {
+  display: none;
+}
+
+.trendingCard {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2);
+  background: var(--bg-card);
+  padding: var(--space-3);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-primary);
+  min-width: 80px;
+  transition: all var(--duration-fast) ease;
+}
+
+.trendingCard:active {
+  background: var(--bg-card-hover);
+  transform: scale(0.95);
+}
+
+.trendingImg {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+}
+
+.trendingName {
+  font-size: var(--font-xs);
+  font-weight: 600;
+}
+
+.trendingRank {
+  font-size: var(--font-xs);
+  color: var(--text-tertiary);
+  background: var(--bg-tertiary);
+  padding: 2px 6px;
+  border-radius: var(--radius-full);
+}
+
+/* Search */
+.searchContainer {
+  position: relative;
+  margin: 0 var(--space-4) var(--space-4);
+}
+
+.searchIcon {
+  position: absolute;
+  left: var(--space-3);
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-muted);
+}
+
+.searchInput {
+  width: 100%;
+  background: var(--bg-card);
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-full);
+  padding: var(--space-3) var(--space-4) var(--space-3) 40px;
+  color: var(--text-primary);
+  font-size: var(--font-base);
+}
+
+.searchInput:focus {
+  outline: none;
+  border-color: var(--brand-primary);
+  box-shadow: 0 0 0 2px var(--brand-primary-dim);
+}
+
+/* Categories */
+.categories {
+  display: flex;
+  gap: var(--space-2);
+  padding: 0 var(--space-4) var(--space-4);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.categories::-webkit-scrollbar {
+  display: none;
+}
+
+/* List Header */
+.listHeader {
+  display: flex;
+  align-items: center;
+  padding: var(--space-2) var(--space-4);
+  font-size: var(--font-xs);
+  color: var(--text-tertiary);
+  font-weight: 500;
+  border-bottom: 1px solid var(--border-primary);
+}
+
+.colRank { width: 30px; text-align: left; }
+.colName { flex: 1; padding-left: 48px; }
+.colPrice { width: 80px; text-align: right; }
+.colChange { width: 60px; text-align: right; }
+
+/* List */
+.coinList {
+  padding: 0 var(--space-4) var(--space-4);
+}
+
+.coinRow {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  padding: var(--space-3) 0;
+  border-bottom: 1px solid var(--border-primary);
+  text-align: left;
+  transition: all var(--duration-fast) ease;
+}
+
+.coinRow:active {
+  background: var(--bg-card);
+  margin: 0 calc(-1 * var(--space-4));
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-md);
+}
+
+.coinImg {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  margin: 0 var(--space-3) 0 0;
+}
+
+.coinInfo {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.coinName {
+  font-size: var(--font-sm);
+  font-weight: 600;
+}
+
+.coinSymbol {
+  font-size: var(--font-xs);
+  color: var(--text-secondary);
+}
+
+.coinPrice {
+  width: 80px;
+  text-align: right;
+  font-size: var(--font-sm);
+  font-weight: 600;
+}
+
+.coinChange {
+  width: 60px;
+  text-align: right;
+  font-size: var(--font-sm);
+  font-weight: 500;
+}
+
+/* Skeletons */
+.skeletons {
+  padding: 0 var(--space-4);
+}
+
+.skeletonRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) 0;
+  border-bottom: 1px solid var(--border-primary);
+}
