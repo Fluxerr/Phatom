@@ -127,7 +127,12 @@ export async function getCoinsMarket(
     url += `&category=${category}`;
   }
 
-  return fetchWithCache<CoinMarketData[]>(url, 60_000); // 60s cache
+  try {
+    return await fetchWithCache<CoinMarketData[]>(url, 60_000); // 60s cache
+  } catch (error) {
+    console.warn("CoinGecko getCoinsMarket failed, returning empty array", error);
+    return [];
+  }
 }
 
 // Get simple prices for specific coins
@@ -167,11 +172,16 @@ export async function getCoinOHLC(
 
 // Get trending coins
 export async function getTrending(): Promise<TrendingCoin[]> {
-  const data = await fetchWithCache<{ coins: TrendingCoin[] }>(
-    `${BASE_URL}/search/trending`,
-    300_000 // 5min cache
-  );
-  return data.coins;
+  try {
+    const data = await fetchWithCache<{ coins: TrendingCoin[] }>(
+      `${BASE_URL}/search/trending`,
+      300_000 // 5min cache
+    );
+    return data.coins;
+  } catch (error) {
+    console.warn("CoinGecko getTrending failed, returning empty array", error);
+    return [];
+  }
 }
 
 // Get global market data

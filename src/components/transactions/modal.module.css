@@ -15,7 +15,7 @@
   transform: translateX(-50%);
   width: 100%;
   max-width: var(--max-width);
-  max-height: 92vh;
+  max-height: calc(100% - var(--safe-top) - 16px);
   background: var(--bg-secondary);
   border-radius: var(--radius-xl) var(--radius-xl) 0 0;
   z-index: var(--z-modal);
@@ -169,13 +169,32 @@
   color: var(--text-muted);
 }
 
-.maxBtn {
-  font-size: var(--font-xs);
-  font-weight: 700;
+.amountFiat {
+  font-size: var(--font-sm);
+  color: var(--text-tertiary);
+  margin-top: var(--space-1);
+  padding-left: var(--space-1);
+}
+
+.amountPrefix {
+  font-size: var(--font-xl);
+  font-weight: 600;
+  color: var(--text-secondary);
+  padding-right: var(--space-1);
+}
+
+.toggleFiatBtn {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-size: var(--font-sm);
+  font-weight: 600;
   color: var(--brand-primary);
-  padding: var(--space-1) var(--space-2);
-  border-radius: var(--radius-sm);
   background: var(--brand-primary-dim);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-full);
+  border: none;
+  cursor: pointer;
 }
 
 .amountFiat {

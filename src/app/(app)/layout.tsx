@@ -18,7 +18,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   return (
     <>
-      <div className={styles.content}>
+      <div key={pathname} className={styles.content}>
         {children}
       </div>
       <nav className={`tab-bar glass ${styles.tabBar}`}>

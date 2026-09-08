@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useCallback, useEffect } from "react";
-import { X, Check, Loader2 } from "lucide-react";
+import { X, Check, Loader2, ArrowLeftRight } from "lucide-react";
 import { useWalletStore } from "@/lib/store/walletStore";
 import { SUPPORTED_COINS } from "@/lib/utils/constants";
 import { formatCurrency, formatCoinAmount } from "@/lib/utils/format";
@@ -25,13 +25,16 @@ export default function SendModal({ marketData, onClose, preselectedCoin }: Prop
   const [search, setSearch] = useState("");
   const [processStep, setProcessStep] = useState(0);
   const [error, setError] = useState("");
+  const [isFiat, setIsFiat] = useState(false);
 
   const coinData = marketData.find(c => c.id === selectedCoin);
   const coinConfig = SUPPORTED_COINS.find(c => c.id === selectedCoin);
   const balance = balances[selectedCoin] || 0;
-  const numAmount = parseFloat(amount) || 0;
-  const fiatValue = numAmount * (coinData?.current_price || 0);
-  const fee = numAmount * 0.001;
+  const numInput = parseFloat(amount) || 0;
+  const currentPrice = coinData?.current_price || 1;
+  const coinAmount = isFiat ? numInput / currentPrice : numInput;
+  const fiatValue = isFiat ? numInput : numInput * currentPrice;
+  const fee = coinAmount * 0.001;
 
   const filteredCoins = SUPPORTED_COINS.filter(c => {
     const bal = balances[c.id] || 0;
@@ -55,11 +58,11 @@ export default function SendModal({ marketData, onClose, preselectedCoin }: Prop
   };
 
   const handleAmountNext = () => {
-    if (numAmount <= 0) {
+    if (coinAmount <= 0) {
       setError("Enter an amount");
       return;
     }
-    if (numAmount + fee > balance) {
+    if (coinAmount + fee > balance) {
       setError("Insufficient balance");
       return;
     }
@@ -84,7 +87,7 @@ export default function SendModal({ marketData, onClose, preselectedCoin }: Prop
         try {
           executeSend(
             selectedCoin,
-            numAmount,
+            coinAmount,
             address,
             coinConfig?.networks[0] || "ethereum",
             coinData?.current_price || 0
@@ -96,7 +99,7 @@ export default function SendModal({ marketData, onClose, preselectedCoin }: Prop
         }
       }
     }, 800);
-  }, [selectedCoin, numAmount, address, coinConfig, coinData, executeSend]);
+  }, [selectedCoin, coinAmount, address, coinConfig, coinData, executeSend]);
 
   const stepCount = preselectedCoin ? 3 : 4;
   const currentStep = step === "select" ? 0 : step === "address" ? 1 : step === "amount" ? 2 : 3;
@@ -157,16 +160,26 @@ export default function SendModal({ marketData, onClose, preselectedCoin }: Prop
         {/* Amount */}
         {step === "amount" && (
           <div className={styles.amountSection}>
-            <div className={styles.amountLabel}>Amount ({coinConfig?.symbol})</div>
+            <div className={styles.amountLabel}>Send Amount</div>
             <div className={styles.amountInputRow}>
+              {isFiat && <div className={styles.amountPrefix}>$</div>}
               <input className={styles.amountInput} type="number" placeholder="0.00" value={amount} onChange={e => { setAmount(e.target.value); setError(""); }} />
-              <button className={styles.maxBtn} onClick={() => setAmount(String(Math.max(0, balance - fee)))}>MAX</button>
+              <button className={styles.toggleFiatBtn} onClick={() => setIsFiat(!isFiat)}>
+                <ArrowLeftRight size={14} />
+                {isFiat ? "USD" : coinConfig?.symbol}
+              </button>
             </div>
-            <div className={styles.amountFiat}>≈ {formatCurrency(fiatValue)}</div>
-            <div className={styles.amountFiat}>Balance: {formatCoinAmount(balance, coinConfig?.symbol || "")}</div>
-            {error && <p style={{ color: "var(--color-danger)", fontSize: "var(--font-sm)", marginTop: 8 }}>{error}</p>}
+            <div className={styles.amountFiat}>≈ {isFiat ? formatCoinAmount(coinAmount, coinConfig?.symbol || "") : formatCurrency(fiatValue)}</div>
+            {error && <div className={styles.errorText}>{error}</div>}
+            
             <div style={{ marginTop: 16 }}>
-              <button className="btn btn-primary btn-full" onClick={handleAmountNext}>Review</button>
+              <div style={{ display: "flex", justifyContent: "space-between", fontSize: "var(--font-sm)", color: "var(--text-secondary)", marginBottom: 16 }}>
+                <span>Available</span>
+                <span>{formatCoinAmount(balance, coinConfig?.symbol || "")}</span>
+              </div>
+              <button className="btn btn-primary btn-full btn-lg" onClick={handleAmountNext}>
+                Review Send
+              </button>
             </div>
           </div>
         )}
@@ -181,15 +194,15 @@ export default function SendModal({ marketData, onClose, preselectedCoin }: Prop
               </div>
               <div className={styles.reviewRow}>
                 <span className={styles.reviewLabel}>Amount</span>
-                <span className={styles.reviewValue}>{formatCoinAmount(numAmount, coinConfig?.symbol || "")}</span>
-              </div>
-              <div className={styles.reviewRow}>
-                <span className={styles.reviewLabel}>To</span>
-                <span className={styles.reviewValue} style={{ fontSize: "var(--font-xs)", maxWidth: 180, wordBreak: "break-all" }}>{address}</span>
+                <span className={styles.reviewValue}>{formatCoinAmount(coinAmount, coinConfig?.symbol || "")}</span>
               </div>
               <div className={styles.reviewRow}>
                 <span className={styles.reviewLabel}>Network Fee</span>
                 <span className={styles.reviewValue}>{formatCoinAmount(fee, coinConfig?.symbol || "")}</span>
+              </div>
+              <div className={styles.reviewRow}>
+                <span className={styles.reviewLabel}>Total</span>
+                <span className={styles.reviewValue}>{formatCoinAmount(coinAmount + fee, coinConfig?.symbol || "")}</span>
               </div>
               <div className={styles.reviewRow}>
                 <span className={styles.reviewLabel}>Total</span>
@@ -222,7 +235,7 @@ export default function SendModal({ marketData, onClose, preselectedCoin }: Prop
           <div className={styles.successContainer}>
             <div className={styles.successIcon}><Check size={32} /></div>
             <h3 className={styles.successTitle}>Sent Successfully!</h3>
-            <div className={styles.successAmount}>{formatCoinAmount(numAmount, coinConfig?.symbol || "")}</div>
+            <div className={styles.successAmount}>-{formatCoinAmount(coinAmount, coinConfig?.symbol || "")}</div>
             <p className={styles.successDetail}>≈ {formatCurrency(fiatValue)}</p>
             <button className="btn btn-primary btn-full" onClick={onClose} style={{ marginTop: 16 }}>Done</button>
           </div>

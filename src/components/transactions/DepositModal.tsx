@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useCallback } from "react";
-import { X, Check, Loader2 } from "lucide-react";
+import { X, Check, Loader2, ArrowLeftRight } from "lucide-react";
 import { useWalletStore } from "@/lib/store/walletStore";
 import { SUPPORTED_COINS, NETWORKS } from "@/lib/utils/constants";
 import { formatCurrency, formatCoinAmount } from "@/lib/utils/format";
@@ -24,12 +24,15 @@ export default function DepositModal({ marketData, onClose }: Props) {
   const [search, setSearch] = useState("");
   const [processStep, setProcessStep] = useState(0);
   const [confirmations, setConfirmations] = useState(0);
+  const [isFiat, setIsFiat] = useState(false);
 
   const coinData = marketData.find(c => c.id === selectedCoin);
   const coinConfig = SUPPORTED_COINS.find(c => c.id === selectedCoin);
   const network = NETWORKS.find(n => n.id === selectedNetwork);
-  const numAmount = parseFloat(amount) || 0;
-  const fiatValue = numAmount * (coinData?.current_price || 0);
+  const numInput = parseFloat(amount) || 0;
+  const currentPrice = coinData?.current_price || 1;
+  const coinAmount = isFiat ? numInput / currentPrice : numInput;
+  const fiatValue = isFiat ? numInput : numInput * currentPrice;
 
   const filteredCoins = SUPPORTED_COINS.filter(c => {
     if (!search) return true;
@@ -61,11 +64,11 @@ export default function DepositModal({ marketData, onClose }: Props) {
       
       if (conf >= totalConfs) {
         clearInterval(interval);
-        executeReceive(selectedCoin, numAmount, selectedNetwork, coinData?.current_price || 0);
+        executeReceive(selectedCoin, coinAmount, selectedNetwork, coinData?.current_price || 0);
         setTimeout(() => setStep("success"), 500);
       }
     }, 300);
-  }, [numAmount, network, selectedCoin, selectedNetwork, coinData, executeReceive]);
+  }, [coinAmount, network, selectedCoin, selectedNetwork, coinData, executeReceive]);
 
   return (
     <>
@@ -125,13 +128,18 @@ export default function DepositModal({ marketData, onClose }: Props) {
 
         {step === "amount" && (
           <div className={styles.amountSection}>
-            <div className={styles.amountLabel}>Deposit Amount ({coinConfig?.symbol})</div>
+            <div className={styles.amountLabel}>Deposit Amount</div>
             <div className={styles.amountInputRow}>
+              {isFiat && <div className={styles.amountPrefix}>$</div>}
               <input className={styles.amountInput} type="number" placeholder="0.00" value={amount} onChange={e => setAmount(e.target.value)} />
+              <button className={styles.toggleFiatBtn} onClick={() => setIsFiat(!isFiat)}>
+                <ArrowLeftRight size={14} />
+                {isFiat ? "USD" : coinConfig?.symbol}
+              </button>
             </div>
-            <div className={styles.amountFiat}>≈ {formatCurrency(fiatValue)}</div>
+            <div className={styles.amountFiat}>≈ {isFiat ? formatCoinAmount(coinAmount, coinConfig?.symbol || "") : formatCurrency(fiatValue)}</div>
             <div style={{ marginTop: 16 }}>
-              <button className="btn btn-primary btn-full btn-lg" onClick={handleDeposit} disabled={numAmount <= 0}>
+              <button className="btn btn-primary btn-full btn-lg" onClick={handleDeposit} disabled={coinAmount <= 0}>
                 Simulate Deposit
               </button>
             </div>
@@ -170,7 +178,7 @@ export default function DepositModal({ marketData, onClose }: Props) {
           <div className={styles.successContainer}>
             <div className={styles.successIcon}><Check size={32} /></div>
             <h3 className={styles.successTitle}>Deposit Confirmed!</h3>
-            <div className={styles.successAmount}>{formatCoinAmount(numAmount, coinConfig?.symbol || "")}</div>
+            <div className={styles.successAmount}>{formatCoinAmount(coinAmount, coinConfig?.symbol || "")}</div>
             <p className={styles.successDetail}>≈ {formatCurrency(fiatValue)}</p>
             <button className="btn btn-primary btn-full" onClick={onClose} style={{ marginTop: 16 }}>Done</button>
           </div>
