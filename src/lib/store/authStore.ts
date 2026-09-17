@@ -70,6 +70,11 @@ export const useAuthStore = create<AuthState>()(
     }),
     {
       name: "phantom-auth",
+      onRehydrateStorage: () => (state) => {
+        if (state && state.isOnboarded && !state.walletId) {
+          state.walletId = generateWalletId();
+        }
+      },
     }
   )
 );

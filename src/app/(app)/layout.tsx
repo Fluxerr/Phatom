@@ -9,6 +9,7 @@ import { useWalletStore } from "@/lib/store/walletStore";
 import { useToast } from "@/components/Toast";
 import { isSupabaseConfigured } from "@/lib/supabase";
 import { subscribeToTransfers } from "@/lib/store/transferStore";
+import { generateWalletId } from "@/lib/utils/crypto";
 import styles from "./appLayout.module.css";
 
 const tabs = [
@@ -21,17 +22,22 @@ const tabs = [
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const { walletId, walletName } = useAuthStore();
+  const { walletId, walletName, isOnboarded } = useAuthStore();
   const { checkIncomingTransfers, registerWalletAddresses } = useWalletStore();
   const { showToast } = useToast();
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  // Register addresses with Supabase on mount
+  // Register addresses with Supabase on mount (and auto-assign walletId to legacy accounts)
   useEffect(() => {
-    if (walletId && isSupabaseConfigured()) {
-      registerWalletAddresses(walletId, walletName);
+    let id = walletId;
+    if (isOnboarded && !id) {
+      id = generateWalletId();
+      useAuthStore.setState({ walletId: id });
     }
-  }, [walletId, walletName, registerWalletAddresses]);
+    if (id && isSupabaseConfigured()) {
+      registerWalletAddresses(id, walletName);
+    }
+  }, [isOnboarded, walletId, walletName, registerWalletAddresses]);
 
   // Poll for incoming transfers
   const pollTransfers = useCallback(async () => {
