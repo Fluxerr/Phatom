@@ -252,21 +252,19 @@ export const useWalletStore = create<WalletState>()(
         const transaction: Transaction = { ...tx, id };
         set(s => ({ transactions: [transaction, ...s.transactions] }));
 
-        // Create P2P transfer record in Supabase
-        if (isInternal) {
-          await createTransfer({
-            from_wallet_id: "", // Will be set by the caller
-            to_address: toAddress.toLowerCase(),
-            to_wallet_id: recipient?.wallet_id,
-            coin_id: coinId,
-            coin_symbol: coin?.symbol || coinId.toUpperCase(),
-            amount,
-            fiat_value: amount * price,
-            network,
-            tx_hash: txHash,
-            status: "pending",
-          });
-        }
+        // Create P2P transfer record in Supabase & Local Registry
+        await createTransfer({
+          from_wallet_id: "",
+          to_address: toAddress.trim(),
+          to_wallet_id: recipient?.wallet_id,
+          coin_id: coinId,
+          coin_symbol: coin?.symbol || coinId.toUpperCase(),
+          amount,
+          fiat_value: amount * price,
+          network,
+          tx_hash: txHash,
+          status: "pending",
+        });
 
         return transaction;
       },
@@ -354,7 +352,8 @@ export const useWalletStore = create<WalletState>()(
 
       // Check for and claim incoming P2P transfers
       checkIncomingTransfers: async (walletId: string): Promise<Transaction[]> => {
-        const pending = await getPendingTransfers(walletId);
+        const userAddrs = Object.values(get().addresses);
+        const pending = await getPendingTransfers(walletId, userAddrs);
         const claimed: Transaction[] = [];
 
         for (const transfer of pending) {
