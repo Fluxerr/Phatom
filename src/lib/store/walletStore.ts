@@ -118,6 +118,11 @@ export const useWalletStore = create<WalletState>()(
           visibleCoins: SUPPORTED_COINS.filter(c => c.isMajor).map(c => c.id),
           transactions: [],
         });
+
+        // Register with Supabase & local registry immediately upon creation
+        if (walletId) {
+          registerAddresses(walletId, "Main Wallet", addresses);
+        }
       },
 
       getBalance: (coinId) => {
