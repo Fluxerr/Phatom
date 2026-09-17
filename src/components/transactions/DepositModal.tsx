@@ -40,7 +40,7 @@ export default function DepositModal({ marketData, onClose }: Props) {
   });
 
   const handleDeposit = useCallback(() => {
-    if (numAmount <= 0) return;
+    if (coinAmount <= 0) return;
     setStep("processing");
     
     const totalConfs = network?.confirmations || 12;

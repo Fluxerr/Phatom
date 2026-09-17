@@ -2,8 +2,8 @@
   position: fixed;
   inset: 0;
   background: rgba(0, 0, 0, 0.6);
-  backdrop-filter: blur(4px);
-  -webkit-backdrop-filter: blur(4px);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   z-index: var(--z-modal-backdrop);
   animation: fadeIn var(--duration-fast) var(--ease-out);
 }
@@ -17,19 +17,21 @@
   max-width: var(--max-width);
   max-height: calc(100% - var(--safe-top) - 16px);
   background: var(--bg-secondary);
-  border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+  border-radius: var(--radius-2xl) var(--radius-2xl) 0 0;
   z-index: var(--z-modal);
-  animation: slideUp var(--duration-slow) var(--ease-out);
+  animation: slideUpSmooth var(--duration-slow) var(--ease-out);
   overflow-y: auto;
-  padding: 0 var(--space-4) calc(var(--safe-bottom) + var(--space-4));
+  padding: 0 var(--space-4) calc(var(--safe-bottom) + var(--tab-bar-height) + 24px);
+  box-shadow: 0 -8px 40px rgba(0, 0, 0, 0.3);
 }
 
 .handle {
-  width: 36px;
+  width: 40px;
   height: 4px;
   background: var(--text-muted);
   border-radius: var(--radius-full);
   margin: var(--space-3) auto var(--space-2);
+  opacity: 0.5;
 }
 
 .modalHeader {
@@ -42,7 +44,8 @@
 
 .modalTitle {
   font-size: var(--font-lg);
-  font-weight: 700;
+  font-weight: 800;
+  letter-spacing: -0.01em;
 }
 
 .closeBtn {
@@ -54,6 +57,12 @@
   align-items: center;
   justify-content: center;
   color: var(--text-secondary);
+  transition: all var(--duration-fast) var(--ease-in-out);
+}
+
+.closeBtn:hover {
+  background: var(--bg-elevated);
+  color: var(--text-primary);
 }
 
 /* Steps */
@@ -70,13 +79,14 @@
   height: 8px;
   border-radius: 50%;
   background: var(--bg-elevated);
-  transition: all var(--duration-fast) var(--ease-in-out);
+  transition: all var(--duration-normal) var(--ease-spring);
 }
 
 .stepDotActive {
   background: var(--brand-primary);
-  width: 24px;
+  width: 28px;
   border-radius: var(--radius-full);
+  box-shadow: 0 0 12px var(--brand-primary-glow);
 }
 
 .stepDotCompleted {
@@ -95,10 +105,10 @@
   display: flex;
   align-items: center;
   gap: var(--space-3);
-  padding: var(--space-3);
+  padding: var(--space-3) var(--space-4);
   background: var(--bg-card);
   border: 1px solid var(--border-primary);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-lg);
   width: 100%;
   text-align: left;
   transition: all var(--duration-fast) var(--ease-in-out);
@@ -107,6 +117,7 @@
 .coinOption:hover {
   border-color: var(--border-secondary);
   background: var(--bg-card-hover);
+  transform: translateY(-1px);
 }
 
 .coinOptionActive {
@@ -122,6 +133,7 @@
 
 .coinOptionInfo {
   flex: 1;
+  min-width: 0;
 }
 
 .coinOptionName {
@@ -141,6 +153,7 @@
 
 .amountLabel {
   font-size: var(--font-sm);
+  font-weight: 600;
   color: var(--text-secondary);
   margin-bottom: var(--space-2);
 }
@@ -151,14 +164,20 @@
   gap: var(--space-2);
   background: var(--bg-card);
   border: 1px solid var(--border-primary);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-lg);
   padding: var(--space-3) var(--space-4);
+  transition: border-color var(--duration-fast) var(--ease-in-out);
+}
+
+.amountInputRow:focus-within {
+  border-color: var(--brand-primary);
+  box-shadow: 0 0 0 3px var(--brand-primary-dim);
 }
 
 .amountInput {
   flex: 1;
   font-size: var(--font-xl);
-  font-weight: 600;
+  font-weight: 700;
   background: none;
   border: none;
   color: var(--text-primary);
@@ -178,7 +197,7 @@
 
 .amountPrefix {
   font-size: var(--font-xl);
-  font-weight: 600;
+  font-weight: 700;
   color: var(--text-secondary);
   padding-right: var(--space-1);
 }
@@ -195,13 +214,37 @@
   border-radius: var(--radius-full);
   border: none;
   cursor: pointer;
+  transition: all var(--duration-fast) var(--ease-in-out);
 }
 
-.amountFiat {
+.toggleFiatBtn:hover {
+  background: var(--brand-primary);
+  color: white;
+}
+
+.errorText {
+  color: var(--color-danger);
   font-size: var(--font-sm);
-  color: var(--text-tertiary);
-  margin-top: var(--space-1);
-  padding-left: var(--space-1);
+  margin-top: var(--space-2);
+  font-weight: 500;
+}
+
+.maxBtn {
+  font-size: var(--font-xs);
+  font-weight: 700;
+  color: var(--brand-primary);
+  background: var(--brand-primary-dim);
+  padding: 4px 10px;
+  border-radius: var(--radius-full);
+  border: none;
+  cursor: pointer;
+  letter-spacing: 0.04em;
+  transition: all var(--duration-fast) var(--ease-in-out);
+}
+
+.maxBtn:hover {
+  background: var(--brand-primary);
+  color: white;
 }
 
 /* Address Input */
@@ -211,8 +254,24 @@
 
 .addressLabel {
   font-size: var(--font-sm);
+  font-weight: 600;
   color: var(--text-secondary);
   margin-bottom: var(--space-2);
+}
+
+/* Internal Transfer Indicator */
+.internalBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 12px;
+  border-radius: var(--radius-full);
+  background: var(--color-success-dim);
+  color: var(--color-success);
+  font-size: var(--font-xs);
+  font-weight: 700;
+  margin-top: var(--space-2);
+  border: 1px solid rgba(16, 185, 129, 0.2);
 }
 
 /* Review Section */
@@ -221,13 +280,14 @@
   border-radius: var(--radius-lg);
   padding: var(--space-4);
   margin-bottom: var(--space-4);
+  border: 1px solid var(--border-primary);
 }
 
 .reviewRow {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: var(--space-2) 0;
+  padding: var(--space-3) 0;
 }
 
 .reviewRow + .reviewRow {
@@ -247,7 +307,7 @@
 
 .reviewTotal {
   font-size: var(--font-lg);
-  font-weight: 700;
+  font-weight: 800;
   color: var(--brand-primary);
 }
 
@@ -267,13 +327,15 @@
   border: 3px solid var(--border-secondary);
   border-top-color: var(--brand-primary);
   border-radius: 50%;
-  animation: spin 1s linear infinite;
+  animation: spin 0.8s linear infinite;
+  box-shadow: 0 0 20px var(--brand-primary-glow);
 }
 
 .processingText {
   font-size: var(--font-base);
   color: var(--text-secondary);
   text-align: center;
+  font-weight: 500;
 }
 
 .processingSteps {
@@ -291,6 +353,7 @@
   color: var(--text-muted);
   font-size: var(--font-sm);
   transition: all 0.3s ease;
+  font-weight: 500;
 }
 
 .processingStepActive {
@@ -302,8 +365,8 @@
 }
 
 .processingStepIcon {
-  width: 24px;
-  height: 24px;
+  width: 28px;
+  height: 28px;
   border-radius: 50%;
   display: flex;
   align-items: center;
@@ -311,11 +374,13 @@
   background: var(--bg-elevated);
   font-size: var(--font-xs);
   flex-shrink: 0;
+  transition: all 0.3s ease;
 }
 
 .processingStepIconActive {
   background: var(--brand-primary-dim);
   color: var(--brand-primary);
+  box-shadow: 0 0 12px var(--brand-primary-glow);
 }
 
 .processingStepIconDone {
@@ -333,25 +398,27 @@
 }
 
 .successIcon {
-  width: 72px;
-  height: 72px;
+  width: 80px;
+  height: 80px;
   border-radius: 50%;
   background: var(--color-success-dim);
   display: flex;
   align-items: center;
   justify-content: center;
   color: var(--color-success);
-  animation: fadeInUp var(--duration-slow) var(--ease-out);
+  animation: bounceIn 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+  box-shadow: 0 0 32px var(--color-success-glow);
 }
 
 .successTitle {
   font-size: var(--font-xl);
-  font-weight: 700;
+  font-weight: 800;
+  letter-spacing: -0.01em;
 }
 
 .successAmount {
   font-size: var(--font-2xl);
-  font-weight: 800;
+  font-weight: 900;
 }
 
 .successDetail {
@@ -374,11 +441,12 @@
   width: 200px;
   height: 200px;
   background: white;
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-xl);
   display: flex;
   align-items: center;
   justify-content: center;
   padding: var(--space-4);
+  box-shadow: var(--shadow-md);
 }
 
 .addressDisplay {
@@ -387,21 +455,31 @@
   gap: var(--space-2);
   padding: var(--space-3) var(--space-4);
   background: var(--bg-card);
-  border-radius: var(--radius-md);
-  font-family: monospace;
+  border-radius: var(--radius-lg);
+  font-family: 'SF Mono', 'Fira Code', monospace;
   font-size: var(--font-sm);
   word-break: break-all;
   max-width: 100%;
+  border: 1px solid var(--border-primary);
 }
 
 .copyBtn {
   flex-shrink: 0;
-  padding: var(--space-1) var(--space-2);
+  padding: var(--space-2) var(--space-3);
   border-radius: var(--radius-sm);
   background: var(--brand-primary-dim);
   color: var(--brand-primary);
   font-size: var(--font-xs);
-  font-weight: 600;
+  font-weight: 700;
+  transition: all var(--duration-fast) var(--ease-in-out);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.copyBtn:hover {
+  background: var(--brand-primary);
+  color: white;
 }
 
 /* Network selector */
@@ -416,10 +494,10 @@
   display: flex;
   align-items: center;
   gap: var(--space-3);
-  padding: var(--space-3);
+  padding: var(--space-3) var(--space-4);
   background: var(--bg-card);
   border: 1px solid var(--border-primary);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-lg);
   width: 100%;
   text-align: left;
   transition: all var(--duration-fast) var(--ease-in-out);
@@ -427,6 +505,8 @@
 
 .networkOption:hover {
   border-color: var(--border-secondary);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-sm);
 }
 
 .networkOptionActive {
@@ -439,10 +519,11 @@
   height: 10px;
   border-radius: 50%;
   background: var(--brand-primary);
+  box-shadow: 0 0 8px var(--brand-primary-glow);
 }
 
 .networkName {
-  font-weight: 500;
+  font-weight: 600;
   flex: 1;
 }
 
@@ -457,10 +538,11 @@
   padding: var(--space-3) var(--space-4);
   background: var(--bg-card);
   border: 1px solid var(--border-primary);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-lg);
   color: var(--text-primary);
   font-size: var(--font-base);
   margin-bottom: var(--space-3);
+  transition: all var(--duration-fast) var(--ease-in-out);
 }
 
 .searchInput::placeholder {
@@ -469,6 +551,7 @@
 
 .searchInput:focus {
   border-color: var(--brand-primary);
+  box-shadow: 0 0 0 3px var(--brand-primary-dim);
   outline: none;
 }
 

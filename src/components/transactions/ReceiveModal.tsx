@@ -63,14 +63,16 @@ export default function ReceiveModal({ onClose }: Props) {
                 <rect width="160" height="160" fill="white" />
                 {Array.from({ length: 20 }).map((_, row) => 
                   Array.from({ length: 20 }).map((_, col) => {
+                    const seed = (address.charCodeAt((row * 20 + col) % (address.length || 1)) * 31 + row * 7 + col * 13);
                     const isFilled = (
-                      (row < 7 && col < 7) ||
-                      (row < 7 && col > 12) ||
-                      (row > 12 && col < 7) ||
-                      Math.random() > 0.5
+                      (row < 7 && col < 7 && !(row >= 2 && row <= 4 && col >= 2 && col <= 4)) ||
+                      (row < 7 && col > 12 && !(row >= 2 && row <= 4 && col >= 14 && col <= 16)) ||
+                      (row > 12 && col < 7 && !(row >= 14 && row <= 16 && col >= 2 && col <= 4)) ||
+                      (row === 3 && col === 3) || (row === 3 && col === 15) || (row === 15 && col === 3) ||
+                      (seed % 3 === 0)
                     );
                     return isFilled ? (
-                      <rect key={`${row}-${col}`} x={col * 8} y={row * 8} width="8" height="8" fill="black" />
+                      <rect key={`${row}-${col}`} x={col * 8} y={row * 8} width="8" height="8" fill="#0f172a" />
                     ) : null;
                   })
                 )}

@@ -2,8 +2,15 @@
 
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import { INITIAL_PORTFOLIO, SUPPORTED_COINS } from "../utils/constants";
-import { generateAddress, generateTxHash } from "../utils/crypto";
+import { INITIAL_PORTFOLIO, SUPPORTED_COINS, NETWORKS } from "../utils/constants";
+import { generateAddress, generateTxHash, generateDeterministicAddress } from "../utils/crypto";
+import {
+  registerAddresses,
+  lookupAddress,
+  createTransfer,
+  getPendingTransfers,
+  claimTransfer,
+} from "./transferStore";
 
 export type TransactionType = "send" | "receive" | "swap" | "deposit" | "withdraw";
 export type TransactionStatus = "pending" | "confirming" | "confirmed" | "failed";
@@ -28,12 +35,15 @@ export interface Transaction {
   toCoinId?: string;
   toCoinSymbol?: string;
   toAmount?: number;
+  // For P2P transfers
+  isInternalTransfer?: boolean;
+  recipientWalletName?: string;
 }
 
 interface WalletState {
   // Balances: coinId -> amount
   balances: Record<string, number>;
-  // Wallet addresses per network
+  // Wallet addresses per network (deterministic, persisted)
   addresses: Record<string, string>;
   // Transaction history
   transactions: Transaction[];
@@ -43,7 +53,7 @@ interface WalletState {
   visibleCoins: string[];
 
   // Actions
-  initializeWallet: () => void;
+  initializeWallet: (walletId: string, seedPhrase: string[]) => void;
   getBalance: (coinId: string) => number;
   setBalance: (coinId: string, amount: number) => void;
   addBalance: (coinId: string, amount: number) => void;
@@ -56,9 +66,13 @@ interface WalletState {
   resetWallet: () => void;
   
   // Complex transaction helpers
-  executeSend: (coinId: string, amount: number, toAddress: string, network: string, price: number) => Transaction;
+  executeSend: (coinId: string, amount: number, toAddress: string, network: string, price: number) => Promise<Transaction>;
   executeReceive: (coinId: string, amount: number, network: string, price: number) => Transaction;
   executeSwap: (fromCoinId: string, fromAmount: number, toCoinId: string, toAmount: number, fromPrice: number, toPrice: number) => Transaction;
+  
+  // P2P transfer helpers
+  checkIncomingTransfers: (walletId: string) => Promise<Transaction[]>;
+  registerWalletAddresses: (walletId: string, walletName: string) => Promise<void>;
 }
 
 export const useWalletStore = create<WalletState>()(
@@ -70,7 +84,7 @@ export const useWalletStore = create<WalletState>()(
       hideBalance: false,
       visibleCoins: SUPPORTED_COINS.filter(c => c.isMajor).map(c => c.id),
 
-      initializeWallet: () => {
+      initializeWallet: (walletId: string, seedPhrase: string[]) => {
         const balances: Record<string, number> = {};
         // Set initial balances for major coins
         Object.entries(INITIAL_PORTFOLIO).forEach(([coinId, amount]) => {
@@ -83,8 +97,24 @@ export const useWalletStore = create<WalletState>()(
           }
         });
 
+        // Generate deterministic addresses for all networks using seed phrase
+        const seed = seedPhrase.join(" ");
+        const addresses: Record<string, string> = {};
+        
+        // Generate an address for every unique network across all coins
+        const allNetworks = new Set<string>();
+        SUPPORTED_COINS.forEach(coin => {
+          coin.networks.forEach(net => allNetworks.add(net));
+        });
+        NETWORKS.forEach(net => allNetworks.add(net.id));
+
+        allNetworks.forEach(network => {
+          addresses[network] = generateDeterministicAddress(`${walletId}:${seed}`, network);
+        });
+
         set({
           balances,
+          addresses,
           visibleCoins: SUPPORTED_COINS.filter(c => c.isMajor).map(c => c.id),
           transactions: [],
         });
@@ -124,6 +154,7 @@ export const useWalletStore = create<WalletState>()(
       getAddress: (network) => {
         const { addresses } = get();
         if (addresses[network]) return addresses[network];
+        // Fallback: generate a random one if not pre-generated
         const newAddress = generateAddress(network);
         set(state => ({
           addresses: { ...state.addresses, [network]: newAddress },
@@ -173,7 +204,7 @@ export const useWalletStore = create<WalletState>()(
         });
       },
 
-      executeSend: (coinId, amount, toAddress, network, price) => {
+      executeSend: async (coinId, amount, toAddress, network, price) => {
         const state = get();
         const coin = SUPPORTED_COINS.find(c => c.id === coinId);
         const fee = amount * 0.001; // 0.1% simulated fee
@@ -182,6 +213,10 @@ export const useWalletStore = create<WalletState>()(
         if ((state.balances[coinId] || 0) < total) {
           throw new Error("Insufficient balance");
         }
+
+        // Check if recipient is a known address (P2P transfer)
+        const recipient = await lookupAddress(toAddress);
+        const isInternal = !!recipient;
 
         // Deduct balance
         set(s => ({
@@ -192,6 +227,8 @@ export const useWalletStore = create<WalletState>()(
         }));
 
         const fromAddress = state.addresses[network] || generateAddress(network);
+        const txHash = generateTxHash(network);
+        
         const tx: Omit<Transaction, "id"> = {
           type: "send",
           coinId,
@@ -200,18 +237,37 @@ export const useWalletStore = create<WalletState>()(
           fiatValue: amount * price,
           fromAddress,
           toAddress,
-          txHash: generateTxHash(network),
+          txHash,
           network,
           fee,
-          status: "confirming",
+          status: isInternal ? "confirmed" : "confirming",
           timestamp: Date.now(),
-          confirmations: 0,
+          confirmations: isInternal ? 12 : 0,
           requiredConfirmations: 12,
+          isInternalTransfer: isInternal,
+          recipientWalletName: recipient?.wallet_name,
         };
 
         const id = `tx_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
         const transaction: Transaction = { ...tx, id };
         set(s => ({ transactions: [transaction, ...s.transactions] }));
+
+        // Create P2P transfer record in Supabase
+        if (isInternal) {
+          await createTransfer({
+            from_wallet_id: "", // Will be set by the caller
+            to_address: toAddress.toLowerCase(),
+            to_wallet_id: recipient?.wallet_id,
+            coin_id: coinId,
+            coin_symbol: coin?.symbol || coinId.toUpperCase(),
+            amount,
+            fiat_value: amount * price,
+            network,
+            tx_hash: txHash,
+            status: "pending",
+          });
+        }
+
         return transaction;
       },
 
@@ -294,6 +350,58 @@ export const useWalletStore = create<WalletState>()(
         const transaction: Transaction = { ...tx, id };
         set(s => ({ transactions: [transaction, ...s.transactions] }));
         return transaction;
+      },
+
+      // Check for and claim incoming P2P transfers
+      checkIncomingTransfers: async (walletId: string): Promise<Transaction[]> => {
+        const pending = await getPendingTransfers(walletId);
+        const claimed: Transaction[] = [];
+
+        for (const transfer of pending) {
+          const success = await claimTransfer(transfer.id!);
+          if (success) {
+            // Add balance
+            set(s => ({
+              balances: {
+                ...s.balances,
+                [transfer.coin_id]: (s.balances[transfer.coin_id] || 0) + transfer.amount,
+              },
+              // Make sure coin is visible
+              visibleCoins: Array.from(new Set([...s.visibleCoins, transfer.coin_id])),
+            }));
+
+            // Add to transaction history
+            const tx: Transaction = {
+              id: `tx_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+              type: "receive",
+              coinId: transfer.coin_id,
+              coinSymbol: transfer.coin_symbol,
+              amount: transfer.amount,
+              fiatValue: transfer.fiat_value,
+              fromAddress: "P2P Transfer",
+              toAddress: get().addresses[transfer.network] || "",
+              txHash: transfer.tx_hash,
+              network: transfer.network,
+              fee: 0,
+              status: "confirmed",
+              timestamp: Date.now(),
+              confirmations: 12,
+              requiredConfirmations: 12,
+              isInternalTransfer: true,
+            };
+
+            set(s => ({ transactions: [tx, ...s.transactions] }));
+            claimed.push(tx);
+          }
+        }
+
+        return claimed;
+      },
+
+      // Register wallet addresses with Supabase
+      registerWalletAddresses: async (walletId: string, walletName: string) => {
+        const { addresses } = get();
+        await registerAddresses(walletId, walletName, addresses);
       },
     }),
     {

@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@serwist/next": "^9.5.12",
+    "@supabase/supabase-js": "^2.116.0",
     "framer-motion": "^13.2.0",
     "lightweight-charts": "^5.2.1",
     "lucide-react": "^1.43.0",

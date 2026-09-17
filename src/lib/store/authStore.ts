@@ -2,12 +2,14 @@
 
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
+import { generateWalletId } from "../utils/crypto";
 
 interface AuthState {
   isOnboarded: boolean;
   pin: string | null;
   isLocked: boolean;
   walletName: string;
+  walletId: string;
   seedPhrase: string[] | null;
   
   // Actions
@@ -26,15 +28,18 @@ export const useAuthStore = create<AuthState>()(
       pin: null,
       isLocked: false,
       walletName: "Main Wallet",
+      walletId: "",
       seedPhrase: null,
 
       completeOnboarding: (pin, seedPhrase, walletName) => {
+        const existingId = get().walletId;
         set({
           isOnboarded: true,
           pin,
           seedPhrase,
           isLocked: false,
           walletName: walletName || "Main Wallet",
+          walletId: existingId || generateWalletId(),
         });
       },
 
@@ -58,6 +63,7 @@ export const useAuthStore = create<AuthState>()(
           pin: null,
           isLocked: false,
           walletName: "Main Wallet",
+          walletId: "",
           seedPhrase: null,
         });
       },

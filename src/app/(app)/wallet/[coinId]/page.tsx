@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef, use } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, ArrowUpRight, ArrowDownLeft, ArrowLeftRight, Plus } from "lucide-react";
+import { ArrowLeft, ArrowUpRight, ArrowDownLeft, ArrowLeftRight, Plus, AlertCircle, RefreshCw } from "lucide-react";
 import { getCoinChart, getCoinDetail, getCoinsMarket, CoinMarketData, CoinDetail, ChartData } from "@/lib/api/coingecko";
 import { useWalletStore } from "@/lib/store/walletStore";
 import { SUPPORTED_COINS } from "@/lib/utils/constants";
@@ -32,6 +32,7 @@ export default function CoinDetailPage({ params }: { params: Promise<{ coinId: s
   const [chartData, setChartData] = useState<ChartData | null>(null);
   const [selectedRange, setSelectedRange] = useState("7");
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
   const [activeModal, setActiveModal] = useState<"send" | "receive" | "deposit" | "swap" | null>(null);
 
   const coinConfig = SUPPORTED_COINS.find(c => c.id === coinId);
@@ -40,6 +41,8 @@ export default function CoinDetailPage({ params }: { params: Promise<{ coinId: s
   const fiatValue = balance * (coin?.current_price || 0);
 
   const fetchData = useCallback(async () => {
+    setError(false);
+    setLoading(true);
     try {
       const [market, detail, chart] = await Promise.all([
         getCoinsMarket([coinId]),
@@ -51,6 +54,7 @@ export default function CoinDetailPage({ params }: { params: Promise<{ coinId: s
       setChartData(chart);
     } catch (err) {
       console.error(err);
+      setError(true);
     } finally {
       setLoading(false);
     }
@@ -87,19 +91,19 @@ export default function CoinDetailPage({ params }: { params: Promise<{ coinId: s
     });
     const isUp = prices[prices.length - 1] >= prices[0];
     const color = isUp ? "var(--color-success)" : "var(--color-danger)";
-    const gradientId = isUp ? "chartGradUp" : "chartGradDown";
+    const gradientId = `chartGrad_${coinId}_${isUp ? "up" : "down"}`;
     const fillPoints = `0,${height} ${points.join(" ")} ${width},${height}`;
 
     return (
       <svg width="100%" viewBox={`0 0 ${width} ${height}`} preserveAspectRatio="none">
         <defs>
           <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor={isUp ? "#10B981" : "#EF4444"} stopOpacity="0.2" />
+            <stop offset="0%" stopColor={isUp ? "#10B981" : "#EF4444"} stopOpacity="0.25" />
             <stop offset="100%" stopColor={isUp ? "#10B981" : "#EF4444"} stopOpacity="0" />
           </linearGradient>
         </defs>
         <polygon points={fillPoints} fill={`url(#${gradientId})`} />
-        <polyline points={points.join(" ")} fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+        <polyline points={points.join(" ")} fill="none" stroke={color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
       </svg>
     );
   })();
@@ -111,11 +115,44 @@ export default function CoinDetailPage({ params }: { params: Promise<{ coinId: s
           <button className={styles.backBtn} onClick={() => router.back()}>
             <ArrowLeft size={20} />
           </button>
+          <div className={styles.topBarCenter}>
+            <span className={styles.topBarTitle}>{coinConfig?.name || coinId}</span>
+          </div>
+          <div style={{ width: 36 }} />
         </div>
         <div style={{ padding: "var(--space-4)" }}>
-          <div className={`skeleton`} style={{ height: 200, borderRadius: "var(--radius-lg)", marginBottom: 16 }} />
-          <div className={`skeleton`} style={{ height: 24, width: 150, marginBottom: 8 }} />
-          <div className={`skeleton`} style={{ height: 16, width: 100 }} />
+          <div className="skeleton" style={{ height: 200, borderRadius: "var(--radius-lg)", marginBottom: 16 }} />
+          <div className="skeleton" style={{ height: 32, width: 180, marginBottom: 8 }} />
+          <div className="skeleton" style={{ height: 20, width: 100 }} />
+        </div>
+      </div>
+    );
+  }
+
+  if (error && !coin) {
+    return (
+      <div className={styles.page}>
+        <div className={styles.topBar}>
+          <button className={styles.backBtn} onClick={() => router.back()}>
+            <ArrowLeft size={20} />
+          </button>
+          <div className={styles.topBarCenter}>
+            <span className={styles.topBarTitle}>{coinConfig?.name || coinId}</span>
+          </div>
+          <div style={{ width: 36 }} />
+        </div>
+        <div className="error-state">
+          <div className="error-state-icon">
+            <AlertCircle size={28} />
+          </div>
+          <h3 style={{ fontSize: "var(--font-lg)", fontWeight: 700 }}>Failed to Load</h3>
+          <p style={{ fontSize: "var(--font-sm)", color: "var(--text-secondary)", maxWidth: 260, textAlign: "center" }}>
+            Could not fetch data for {coinConfig?.name || coinId}. This may be due to API rate limits.
+          </p>
+          <button className="btn btn-primary" onClick={fetchData} style={{ marginTop: 8 }}>
+            <RefreshCw size={16} />
+            Try Again
+          </button>
         </div>
       </div>
     );
@@ -146,7 +183,11 @@ export default function CoinDetailPage({ params }: { params: Promise<{ coinId: s
 
       {/* Chart */}
       <div className={styles.chartContainer} ref={chartRef}>
-        {chartSVG}
+        {chartSVG || (
+          <div style={{ height: 200, display: "flex", alignItems: "center", justifyContent: "center", color: "var(--text-muted)" }}>
+            No chart data available
+          </div>
+        )}
       </div>
 
       {/* Time Range */}

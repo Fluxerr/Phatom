@@ -1,10 +1,40 @@
 "use client";
 
 import { useState } from "react";
-import { ArrowUpRight, ArrowDownLeft, ArrowLeftRight, Plus, ExternalLink, Clock } from "lucide-react";
+import { ArrowUpRight, ArrowDownLeft, ArrowLeftRight, Plus, ExternalLink, Clock, Zap } from "lucide-react";
 import { useWalletStore, Transaction } from "@/lib/store/walletStore";
-import { formatCurrency, formatCoinAmount, formatAddress } from "@/lib/utils/format";
+import { formatCurrency, formatCoinAmount, formatAddress, timeAgo } from "@/lib/utils/format";
 import styles from "./activity.module.css";
+
+// Block explorer URLs by network
+const EXPLORERS: Record<string, { name: string; txUrl: string }> = {
+  bitcoin: { name: "Mempool", txUrl: "https://mempool.space/tx/" },
+  ethereum: { name: "Etherscan", txUrl: "https://etherscan.io/tx/" },
+  solana: { name: "Solscan", txUrl: "https://solscan.io/tx/" },
+  bsc: { name: "BscScan", txUrl: "https://bscscan.com/tx/" },
+  polygon: { name: "PolygonScan", txUrl: "https://polygonscan.com/tx/" },
+  avalanche: { name: "Snowtrace", txUrl: "https://snowtrace.io/tx/" },
+  arbitrum: { name: "Arbiscan", txUrl: "https://arbiscan.io/tx/" },
+  optimism: { name: "Optimistic Etherscan", txUrl: "https://optimistic.etherscan.io/tx/" },
+  tron: { name: "Tronscan", txUrl: "https://tronscan.org/#/transaction/" },
+  xrp: { name: "XRPScan", txUrl: "https://xrpscan.com/tx/" },
+  cardano: { name: "CardanoScan", txUrl: "https://cardanoscan.io/transaction/" },
+  dogecoin: { name: "DogeChain", txUrl: "https://dogechain.info/tx/" },
+  polkadot: { name: "Subscan", txUrl: "https://polkadot.subscan.io/extrinsic/" },
+  cosmos: { name: "Mintscan", txUrl: "https://www.mintscan.io/cosmos/tx/" },
+  near: { name: "NEAR Explorer", txUrl: "https://nearblocks.io/txns/" },
+  sui: { name: "SuiScan", txUrl: "https://suiscan.xyz/mainnet/tx/" },
+  litecoin: { name: "Blockchair", txUrl: "https://blockchair.com/litecoin/transaction/" },
+};
+
+function getExplorerUrl(network: string, txHash: string): string {
+  const explorer = EXPLORERS[network] || EXPLORERS["ethereum"];
+  return `${explorer.txUrl}${txHash}`;
+}
+
+function getExplorerName(network: string): string {
+  return EXPLORERS[network]?.name || "Explorer";
+}
 
 export default function ActivityPage() {
   const { transactions } = useWalletStore();
@@ -18,7 +48,8 @@ export default function ActivityPage() {
     return false;
   });
 
-  const getTxIcon = (type: string) => {
+  const getTxIcon = (type: string, isInternal?: boolean) => {
+    if (isInternal) return <div className={`${styles.iconWrap} ${styles.iconInternal}`}><Zap size={16} /></div>;
     switch (type) {
       case "send": return <div className={`${styles.iconWrap} ${styles.iconSend}`}><ArrowUpRight size={16} /></div>;
       case "receive":
@@ -29,11 +60,17 @@ export default function ActivityPage() {
   };
 
   const getTxTitle = (tx: Transaction) => {
+    if (tx.isInternalTransfer && tx.type === "send") {
+      return `Sent to ${tx.recipientWalletName || "Wallet"}`;
+    }
+    if (tx.isInternalTransfer && tx.type === "receive") {
+      return `Received ${tx.coinSymbol}`;
+    }
     switch (tx.type) {
       case "send": return `Sent ${tx.coinSymbol}`;
       case "receive": return `Received ${tx.coinSymbol}`;
       case "deposit": return `Deposited ${tx.coinSymbol}`;
-      case "swap": return `Swapped ${tx.coinSymbol} for ${tx.toCoinSymbol}`;
+      case "swap": return `Swapped ${tx.coinSymbol} → ${tx.toCoinSymbol}`;
       default: return "Transaction";
     }
   };
@@ -60,23 +97,30 @@ export default function ActivityPage() {
       <div className={styles.list}>
         {filteredTx.length === 0 ? (
           <div className={styles.emptyState}>
-            <div className={styles.emptyIcon}><Clock size={32} /></div>
+            <div className={styles.emptyIcon}><Clock size={36} /></div>
             <h3>No Activity Yet</h3>
             <p>Your transactions will appear here</p>
           </div>
         ) : (
-          filteredTx.map(tx => (
-            <div key={tx.id} className={styles.txCard}>
+          filteredTx.map((tx, index) => (
+            <div key={tx.id} className={styles.txCard} style={{ animationDelay: `${index * 50}ms` }}>
               <div className={styles.txHeader}>
                 <div className={styles.txTitleGroup}>
-                  {getTxIcon(tx.type)}
+                  {getTxIcon(tx.type, tx.isInternalTransfer)}
                   <div>
-                    <div className={styles.txTitle}>{getTxTitle(tx)}</div>
-                    <div className={styles.txTime}>{new Date(tx.timestamp).toLocaleString()}</div>
+                    <div className={styles.txTitle}>
+                      {getTxTitle(tx)}
+                      {tx.isInternalTransfer && (
+                        <span className="transfer-badge" style={{ marginLeft: 8 }}>
+                          <Zap size={10} /> P2P
+                        </span>
+                      )}
+                    </div>
+                    <div className={styles.txTime}>{timeAgo(tx.timestamp)}</div>
                   </div>
                 </div>
                 <div className={styles.txAmountGroup}>
-                  <div className={styles.txAmount}>
+                  <div className={`${styles.txAmount} ${tx.type === "send" ? styles.txAmountSend : tx.type === "receive" || tx.type === "deposit" ? styles.txAmountReceive : ""}`}>
                     {tx.type === "send" ? "-" : tx.type === "receive" || tx.type === "deposit" ? "+" : ""}
                     {formatCoinAmount(tx.amount, tx.coinSymbol)}
                   </div>
@@ -97,8 +141,11 @@ export default function ActivityPage() {
                   <span className={styles.detailLabel}>Network Fee</span>
                   <span>{tx.fee > 0 ? formatCoinAmount(tx.fee, tx.coinSymbol) : "Free"}</span>
                 </div>
-                <button className={styles.explorerBtn}>
-                  View on Explorer <ExternalLink size={12} />
+                <button
+                  className={styles.explorerBtn}
+                  onClick={() => window.open(getExplorerUrl(tx.network, tx.txHash), "_blank")}
+                >
+                  View on {getExplorerName(tx.network)} <ExternalLink size={12} />
                 </button>
               </div>
             </div>

@@ -1,29 +1,103 @@
 const BASE_URL = "https://api.coingecko.com/api/v3";
 
-// Simple in-memory cache
-const cache = new Map<string, { data: unknown; expires: number }>();
+// ─── In-memory cache with stale-while-revalidate ───
+const cache = new Map<string, { data: unknown; expires: number; staleAt: number }>();
 
+// ─── Request deduplication ───
+const inflightRequests = new Map<string, Promise<unknown>>();
+
+// ─── Request queue to prevent rate limiting ───
+let lastRequestTime = 0;
+const MIN_REQUEST_INTERVAL = 200; // 200ms between requests
+
+async function rateLimitedFetch(url: string, init?: RequestInit): Promise<Response> {
+  const now = Date.now();
+  const timeSinceLastRequest = now - lastRequestTime;
+
+  if (timeSinceLastRequest < MIN_REQUEST_INTERVAL) {
+    await new Promise(resolve => setTimeout(resolve, MIN_REQUEST_INTERVAL - timeSinceLastRequest));
+  }
+
+  lastRequestTime = Date.now();
+  return fetch(url, init);
+}
+
+// ─── Exponential backoff retry ───
+async function fetchWithRetry(url: string, retries: number = 3): Promise<Response> {
+  for (let attempt = 0; attempt < retries; attempt++) {
+    try {
+      const res = await rateLimitedFetch(url, {
+        headers: { "Accept": "application/json" },
+      });
+
+      if (res.status === 429) {
+        // Rate limited — wait and retry
+        const backoffMs = Math.min(1000 * Math.pow(2, attempt), 8000);
+        console.warn(`CoinGecko rate limited (429). Retrying in ${backoffMs}ms... (attempt ${attempt + 1}/${retries})`);
+        await new Promise(resolve => setTimeout(resolve, backoffMs));
+        continue;
+      }
+
+      return res;
+    } catch (error) {
+      if (attempt === retries - 1) throw error;
+      const backoffMs = Math.min(500 * Math.pow(2, attempt), 4000);
+      await new Promise(resolve => setTimeout(resolve, backoffMs));
+    }
+  }
+
+  throw new Error("Max retries exceeded");
+}
+
+// ─── Main fetch function with cache, dedup, retry, and stale fallback ───
 async function fetchWithCache<T>(url: string, ttlMs: number): Promise<T> {
   const cached = cache.get(url);
+
+  // Return fresh cache
   if (cached && cached.expires > Date.now()) {
     return cached.data as T;
   }
 
-  const res = await fetch(url, {
-    headers: { "Accept": "application/json" },
-  });
-
-  if (!res.ok) {
-    // If rate limited, try to return stale cache
-    if (res.status === 429 && cached) {
-      return cached.data as T;
-    }
-    throw new Error(`CoinGecko API error: ${res.status}`);
+  // Deduplicate in-flight requests
+  const inflight = inflightRequests.get(url);
+  if (inflight) {
+    return inflight as Promise<T>;
   }
 
-  const data = await res.json();
-  cache.set(url, { data, expires: Date.now() + ttlMs });
-  return data as T;
+  const fetchPromise = (async (): Promise<T> => {
+    try {
+      const res = await fetchWithRetry(url);
+
+      if (!res.ok) {
+        // If we have stale cache, return it instead of throwing
+        if (cached) {
+          console.warn(`CoinGecko returned ${res.status}, using stale cache for: ${url}`);
+          return cached.data as T;
+        }
+        throw new Error(`CoinGecko API error: ${res.status}`);
+      }
+
+      const data = await res.json();
+      cache.set(url, {
+        data,
+        expires: Date.now() + ttlMs,
+        staleAt: Date.now() + ttlMs * 3, // Keep stale data for 3x TTL
+      });
+      return data as T;
+    } catch (error) {
+      // Last resort: return stale cache if available
+      if (cached) {
+        console.warn("CoinGecko fetch failed, returning stale cache:", error);
+        return cached.data as T;
+      }
+      throw error;
+    } finally {
+      inflightRequests.delete(url);
+    }
+  })();
+
+  inflightRequests.set(url, fetchPromise);
+  return fetchPromise;
 }
 
 export interface CoinMarketData {

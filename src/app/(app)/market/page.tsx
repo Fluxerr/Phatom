@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { Search, TrendingUp } from "lucide-react";
+import { Search, TrendingUp, AlertCircle, RefreshCw, Loader2 } from "lucide-react";
 import { getCoinsMarket, getTrending, getGlobalData, CoinMarketData, TrendingCoin, GlobalData } from "@/lib/api/coingecko";
 import { MARKET_CATEGORIES } from "@/lib/utils/constants";
 import { formatCurrency, formatPercent } from "@/lib/utils/format";
@@ -14,11 +14,14 @@ export default function MarketPage() {
   const [trending, setTrending] = useState<TrendingCoin[]>([]);
   const [globalData, setGlobalData] = useState<GlobalData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [error, setError] = useState(false);
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("all");
   const [page, setPage] = useState(1);
 
   const fetchData = useCallback(async () => {
+    setError(false);
     try {
       const [market, trend, global] = await Promise.all([
         getCoinsMarket(undefined, "usd", page, 50, true, category !== "all" ? category : undefined),
@@ -32,10 +35,16 @@ export default function MarketPage() {
       }
       if (trend.length) setTrending(trend);
       if (global) setGlobalData(global);
+
+      if (market.length === 0 && page === 1) {
+        setError(true);
+      }
     } catch (err) {
       console.error(err);
+      if (coins.length === 0) setError(true);
     } finally {
       setLoading(false);
+      setLoadingMore(false);
     }
   }, [page, category]);
 
@@ -48,6 +57,11 @@ export default function MarketPage() {
     setCategory(cat);
     setPage(1);
     setCoins([]);
+  };
+
+  const handleLoadMore = () => {
+    setLoadingMore(true);
+    setPage(p => p + 1);
   };
 
   const filteredCoins = search
@@ -125,54 +139,80 @@ export default function MarketPage() {
         ))}
       </div>
 
+      {/* Error State */}
+      {error && coins.length === 0 && !loading && (
+        <div className="error-state">
+          <div className="error-state-icon">
+            <AlertCircle size={28} />
+          </div>
+          <h3 style={{ fontSize: "var(--font-lg)", fontWeight: 700 }}>Failed to Load Market</h3>
+          <p style={{ fontSize: "var(--font-sm)", color: "var(--text-secondary)", maxWidth: 260 }}>
+            Could not fetch market data. This may be due to API rate limits. Please try again.
+          </p>
+          <button className="btn btn-primary" onClick={() => { setLoading(true); fetchData(); }} style={{ marginTop: 8 }}>
+            <RefreshCw size={16} /> Retry
+          </button>
+        </div>
+      )}
+
       {/* Coin List */}
-      <div className={styles.listHeader}>
-        <span className={styles.colRank}>#</span>
-        <span className={styles.colName}>Name</span>
-        <span className={styles.colPrice}>Price</span>
-        <span className={styles.colChange}>24h</span>
-      </div>
-      
-      {loading && coins.length === 0 ? (
-        <div className={styles.skeletons}>
-          {Array.from({ length: 10 }).map((_, i) => (
-            <div key={i} className={styles.skeletonRow}>
-              <div className={`skeleton`} style={{ width: 20, height: 14 }} />
-              <div className={`skeleton`} style={{ width: 32, height: 32, borderRadius: "50%" }} />
-              <div style={{ flex: 1 }}>
-                <div className={`skeleton`} style={{ width: 80, height: 14, marginBottom: 4 }} />
-                <div className={`skeleton`} style={{ width: 40, height: 12 }} />
-              </div>
-              <div className={`skeleton`} style={{ width: 60, height: 14 }} />
+      {(coins.length > 0 || loading) && (
+        <>
+          <div className={styles.listHeader}>
+            <span className={styles.colRank}>#</span>
+            <span className={styles.colName}>Name</span>
+            <span className={styles.colPrice}>Price</span>
+            <span className={styles.colChange}>24h</span>
+          </div>
+          
+          {loading && coins.length === 0 ? (
+            <div className={styles.skeletons}>
+              {Array.from({ length: 10 }).map((_, i) => (
+                <div key={i} className={styles.skeletonRow}>
+                  <div className="skeleton" style={{ width: 20, height: 14 }} />
+                  <div className="skeleton" style={{ width: 32, height: 32, borderRadius: "50%" }} />
+                  <div style={{ flex: 1 }}>
+                    <div className="skeleton" style={{ width: 80, height: 14, marginBottom: 4 }} />
+                    <div className="skeleton" style={{ width: 40, height: 12 }} />
+                  </div>
+                  <div className="skeleton" style={{ width: 60, height: 14 }} />
+                </div>
+              ))}
             </div>
-          ))}
-        </div>
-      ) : (
-        <div className={styles.coinList}>
-          {filteredCoins.map((coin) => (
-            <button
-              key={coin.id}
-              className={styles.coinRow}
-              onClick={() => router.push(`/wallet/${coin.id}`)}
-            >
-              <span className={styles.colRank}>{coin.market_cap_rank}</span>
-              <img src={coin.image} alt={coin.name} className={styles.coinImg} />
-              <div className={styles.coinInfo}>
-                <span className={styles.coinName}>{coin.name}</span>
-                <span className={styles.coinSymbol}>{coin.symbol.toUpperCase()}</span>
-              </div>
-              <span className={styles.coinPrice}>{formatCurrency(coin.current_price)}</span>
-              <span className={`${styles.coinChange} ${coin.price_change_percentage_24h >= 0 ? "price-up" : "price-down"}`}>
-                {formatPercent(coin.price_change_percentage_24h)}
-              </span>
-            </button>
-          ))}
-          {!search && (
-            <button className="btn btn-secondary btn-full" style={{ marginTop: 16 }} onClick={() => setPage(p => p + 1)}>
-              Load More
-            </button>
+          ) : (
+            <div className={styles.coinList}>
+              {filteredCoins.map((coin, index) => (
+                <button
+                  key={coin.id}
+                  className={styles.coinRow}
+                  onClick={() => router.push(`/wallet/${coin.id}`)}
+                  style={{ animationDelay: `${Math.min(index, 20) * 30}ms` }}
+                >
+                  <span className={styles.colRank}>{coin.market_cap_rank}</span>
+                  <img src={coin.image} alt={coin.name} className={styles.coinImg} />
+                  <div className={styles.coinInfo}>
+                    <span className={styles.coinName}>{coin.name}</span>
+                    <span className={styles.coinSymbol}>{coin.symbol.toUpperCase()}</span>
+                  </div>
+                  <span className={styles.coinPrice}>{formatCurrency(coin.current_price)}</span>
+                  <span className={`${styles.coinChange} ${coin.price_change_percentage_24h >= 0 ? "price-up" : "price-down"}`}>
+                    {formatPercent(coin.price_change_percentage_24h)}
+                  </span>
+                </button>
+              ))}
+              {!search && (
+                <button
+                  className="btn btn-secondary btn-full"
+                  style={{ marginTop: 16 }}
+                  onClick={handleLoadMore}
+                  disabled={loadingMore}
+                >
+                  {loadingMore ? <><Loader2 size={16} className="animate-spin" /> Loading...</> : "Load More"}
+                </button>
+              )}
+            </div>
           )}
-        </div>
+        </>
       )}
     </div>
   );

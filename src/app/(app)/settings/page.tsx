@@ -15,6 +15,7 @@ export default function SettingsPage() {
   const { resetWallet } = useWalletStore();
 
   const [showSeed, setShowSeed] = useState(false);
+  const [showPinModal, setShowPinModal] = useState(false);
   const [pinInput, setPinInput] = useState("");
   const [pinError, setPinError] = useState("");
 
@@ -126,7 +127,7 @@ export default function SettingsPage() {
               </label>
             </div>
 
-            <div className={styles.listItem} style={{ cursor: "pointer" }} onClick={() => !showSeed && window.prompt("Enter PIN to view seed phrase") === pin ? setShowSeed(true) : null}>
+            <div className={styles.listItem} style={{ cursor: "pointer" }} onClick={() => { if (!showSeed) setShowPinModal(true); }}>
               <div className={styles.itemIcon}><Key size={18} /></div>
               <div className={styles.itemContent}>
                 <div className={styles.itemTitle}>Show Secret Phrase</div>
@@ -136,6 +137,26 @@ export default function SettingsPage() {
             </div>
           </div>
         </div>
+
+        {showPinModal && !showSeed && (
+          <div className={styles.seedSection} style={{ border: "1px solid var(--border-primary)" }}>
+            <div style={{ fontWeight: 600, marginBottom: 8, fontSize: "var(--font-sm)" }}>Enter Wallet PIN to Reveal</div>
+            <div style={{ display: "flex", gap: 8, marginBottom: 8 }}>
+              <input 
+                type="password"
+                maxLength={4}
+                className={styles.select}
+                style={{ width: "100%", padding: "10px", textAlign: "center", letterSpacing: "8px", fontSize: "18px" }}
+                placeholder="••••"
+                value={pinInput}
+                onChange={e => setPinInput(e.target.value)}
+              />
+              <button className="btn btn-primary" onClick={handleRevealSeed}>Verify</button>
+            </div>
+            {pinError && <p style={{ color: "var(--color-danger)", fontSize: "var(--font-xs)", marginBottom: 8 }}>{pinError}</p>}
+            <button className="btn btn-ghost btn-full" onClick={() => { setShowPinModal(false); setPinInput(""); setPinError(""); }}>Cancel</button>
+          </div>
+        )}
 
         {showSeed && seedPhrase && (
           <div className={styles.seedSection}>

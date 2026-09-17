@@ -1,161 +1,231 @@
 .page {
-  padding-top: calc(var(--safe-top) + var(--space-4));
-  min-height: 100%;
+  padding: 0 var(--space-4);
+  padding-top: var(--safe-top);
 }
 
 .header {
-  padding: 0 var(--space-4) var(--space-4);
+  padding: var(--space-4) 0;
 }
 
 .title {
   font-size: var(--font-2xl);
-  font-weight: 700;
+  font-weight: 800;
+  letter-spacing: -0.02em;
 }
 
 .filters {
   display: flex;
   gap: var(--space-2);
-  padding: 0 var(--space-4) var(--space-4);
+  padding-bottom: var(--space-4);
   overflow-x: auto;
-  scrollbar-width: none;
-}
-.filters::-webkit-scrollbar {
-  display: none;
 }
 
 .list {
   display: flex;
   flex-direction: column;
-  gap: var(--space-4);
-  padding: 0 var(--space-4) var(--space-4);
+  gap: var(--space-3);
 }
 
-.emptyState {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: var(--space-12) 0;
-  color: var(--text-secondary);
-  text-align: center;
-}
-
-.emptyIcon {
-  width: 64px;
-  height: 64px;
-  border-radius: 50%;
-  background: var(--bg-card);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin-bottom: var(--space-4);
-}
-
+/* Transaction Card */
 .txCard {
   background: var(--bg-card);
   border: 1px solid var(--border-primary);
   border-radius: var(--radius-lg);
-  overflow: hidden;
-  animation: fadeInUp var(--duration-fast) ease backwards;
+  padding: var(--space-4);
+  animation: staggerFadeIn 0.4s ease-out both;
+  transition: all var(--duration-fast) var(--ease-in-out);
+  box-shadow: var(--shadow-card);
+}
+
+.txCard:hover {
+  border-color: var(--border-secondary);
+  box-shadow: var(--shadow-md);
 }
 
 .txHeader {
   display: flex;
   justify-content: space-between;
-  padding: var(--space-4);
-  background: var(--bg-elevated);
-  border-bottom: 1px solid var(--border-primary);
+  align-items: flex-start;
+  margin-bottom: var(--space-3);
 }
 
 .txTitleGroup {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: var(--space-3);
 }
 
 .iconWrap {
   width: 36px;
   height: 36px;
-  border-radius: 50%;
+  border-radius: var(--radius-md);
   display: flex;
   align-items: center;
   justify-content: center;
-  background: var(--bg-card);
+  flex-shrink: 0;
+  background: var(--bg-elevated);
+  color: var(--text-secondary);
 }
 
-.iconSend { color: var(--color-danger); background: var(--color-danger-dim); }
-.iconReceive { color: var(--color-success); background: var(--color-success-dim); }
-.iconSwap { color: var(--brand-primary); background: var(--brand-primary-dim); }
+.iconSend {
+  background: var(--color-danger-dim);
+  color: var(--color-danger);
+}
+
+.iconReceive {
+  background: var(--color-success-dim);
+  color: var(--color-success);
+}
+
+.iconSwap {
+  background: var(--brand-primary-dim);
+  color: var(--brand-primary);
+}
+
+.iconInternal {
+  background: linear-gradient(135deg, var(--brand-primary-dim), var(--color-success-dim));
+  color: var(--brand-primary);
+}
 
 .txTitle {
   font-weight: 600;
-  font-size: var(--font-sm);
-  margin-bottom: 2px;
+  font-size: var(--font-base);
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px;
 }
 
 .txTime {
   font-size: var(--font-xs);
   color: var(--text-tertiary);
+  margin-top: 2px;
 }
 
 .txAmountGroup {
   text-align: right;
+  flex-shrink: 0;
 }
 
 .txAmount {
   font-weight: 700;
   font-size: var(--font-base);
-  margin-bottom: 2px;
+}
+
+.txAmountSend {
+  color: var(--color-danger);
+}
+
+.txAmountReceive {
+  color: var(--color-success);
 }
 
 .txFiat {
   font-size: var(--font-xs);
-  color: var(--text-secondary);
+  color: var(--text-tertiary);
+  margin-top: 2px;
 }
 
 .txDetails {
-  padding: var(--space-3) var(--space-4);
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
+  border-top: 1px solid var(--border-primary);
+  padding-top: var(--space-3);
 }
 
 .detailRow {
   display: flex;
   justify-content: space-between;
+  padding: var(--space-2) 0;
   font-size: var(--font-sm);
 }
 
 .detailLabel {
+  color: var(--text-tertiary);
+}
+
+.address {
+  font-family: 'SF Mono', 'Fira Code', monospace;
+  font-size: var(--font-xs);
   color: var(--text-secondary);
 }
 
-.statusSuccess { color: var(--color-success); font-weight: 500; }
-.statusFailed { color: var(--color-danger); font-weight: 500; }
-.statusPending { color: var(--color-warning); font-weight: 500; }
+.statusSuccess {
+  color: var(--color-success);
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
 
-.address {
-  font-family: monospace;
-  font-size: var(--font-xs);
-  color: var(--text-secondary);
+.statusSuccess::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--color-success);
+  display: inline-block;
+}
+
+.statusFailed {
+  color: var(--color-danger);
+  font-weight: 600;
+}
+
+.statusPending {
+  color: var(--color-warning);
+  font-weight: 600;
 }
 
 .explorerBtn {
   display: flex;
   align-items: center;
-  justify-content: center;
   gap: var(--space-2);
+  font-size: var(--font-sm);
+  color: var(--brand-primary);
+  font-weight: 600;
   margin-top: var(--space-2);
-  padding: var(--space-2);
-  border-radius: var(--radius-sm);
-  background: var(--bg-elevated);
-  color: var(--text-secondary);
-  font-size: var(--font-xs);
-  font-weight: 500;
-  transition: all var(--duration-fast) ease;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  background: var(--brand-primary-dim);
+  transition: all var(--duration-fast) var(--ease-in-out);
+  width: 100%;
+  justify-content: center;
 }
 
-.explorerBtn:active {
+.explorerBtn:hover {
+  background: var(--brand-primary);
+  color: white;
+}
+
+/* Empty State */
+.emptyState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-16) var(--space-8);
+  text-align: center;
+  gap: var(--space-3);
+}
+
+.emptyIcon {
+  width: 72px;
+  height: 72px;
+  border-radius: var(--radius-full);
   background: var(--bg-tertiary);
-  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+  margin-bottom: var(--space-2);
+}
+
+.emptyState h3 {
+  font-size: var(--font-lg);
+  font-weight: 700;
+  color: var(--text-secondary);
+}
+
+.emptyState p {
+  font-size: var(--font-sm);
+  color: var(--text-tertiary);
 }

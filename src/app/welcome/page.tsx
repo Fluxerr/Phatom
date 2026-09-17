@@ -101,7 +101,8 @@ export default function WelcomePage() {
     setAnimating(true);
     setTimeout(() => {
       completeOnboarding(finalPin, phrase);
-      initializeWallet();
+      const wId = useAuthStore.getState().walletId;
+      initializeWallet(wId, phrase);
       router.push("/wallet");
     }, 2000);
   }, [completeOnboarding, initializeWallet, router]);
