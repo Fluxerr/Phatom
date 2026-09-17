@@ -6,6 +6,7 @@ import { Search, TrendingUp, AlertCircle, RefreshCw, Loader2 } from "lucide-reac
 import { getCoinsMarket, getTrending, getGlobalData, CoinMarketData, TrendingCoin, GlobalData } from "@/lib/api/coingecko";
 import { MARKET_CATEGORIES } from "@/lib/utils/constants";
 import { formatCurrency, formatPercent } from "@/lib/utils/format";
+import CryptoIcon from "@/components/CryptoIcon";
 import styles from "./market.module.css";
 
 export default function MarketPage() {
@@ -100,17 +101,30 @@ export default function MarketPage() {
             <span>Trending</span>
           </div>
           <div className={styles.trendingScroll}>
-            {trending.slice(0, 7).map(t => (
-              <button
-                key={t.item.id}
-                className={styles.trendingCard}
-                onClick={() => router.push(`/wallet/${t.item.id}`)}
-              >
-                <img src={t.item.thumb} alt={t.item.name} className={styles.trendingImg} />
-                <span className={styles.trendingName}>{t.item.symbol.toUpperCase()}</span>
-                <span className={styles.trendingRank}>#{t.item.market_cap_rank || "—"}</span>
-              </button>
-            ))}
+            {trending.slice(0, 7).map(t => {
+              const change24 = t.item.data?.price_change_percentage_24h?.usd || 0;
+              const priceUsd = t.item.data?.price || (t.item.price_btc * 64000);
+              return (
+                <button
+                  key={t.item.id}
+                  className={styles.trendingCard}
+                  onClick={() => router.push(`/wallet/${t.item.id}`)}
+                >
+                  <CryptoIcon src={t.item.large || t.item.thumb} symbol={t.item.symbol} name={t.item.name} size={32} />
+                  <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", gap: 2 }}>
+                    <span className={styles.trendingName}>{t.item.symbol.toUpperCase()}</span>
+                    <span style={{ fontSize: "var(--font-xs)", color: "var(--text-tertiary)" }}>
+                      {priceUsd > 0 ? formatCurrency(priceUsd) : `#${t.item.market_cap_rank || "—"}`}
+                    </span>
+                  </div>
+                  {change24 !== 0 && (
+                    <span className={`badge ${change24 >= 0 ? "badge-success" : "badge-danger"}`} style={{ fontSize: "10px", padding: "2px 6px" }}>
+                      {formatPercent(change24)}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
           </div>
         </div>
       )}
@@ -189,7 +203,7 @@ export default function MarketPage() {
                   style={{ animationDelay: `${Math.min(index, 20) * 30}ms` }}
                 >
                   <span className={styles.colRank}>{coin.market_cap_rank}</span>
-                  <img src={coin.image} alt={coin.name} className={styles.coinImg} />
+                  <CryptoIcon src={coin.image} symbol={coin.symbol} name={coin.name} size={36} className={styles.coinImg} />
                   <div className={styles.coinInfo}>
                     <span className={styles.coinName}>{coin.name}</span>
                     <span className={styles.coinSymbol}>{coin.symbol.toUpperCase()}</span>

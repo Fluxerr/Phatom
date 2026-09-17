@@ -459,10 +459,42 @@ export async function getCoinChart(
 ): Promise<ChartData> {
   const mapping = COIN_MAPPINGS[coinId] || { coincapId: coinId, binanceSymbol: `${coinId.toUpperCase()}USDT` };
 
-  // Strategy 1: Binance Public Klines (Real 1-hour candles for 7 days, 6,000 req/min limit!)
+  let interval = "1h";
+  let limit = 168;
+  let coincapInterval = "h2";
+  let pointCount = 168;
+  let stepMs = 3600000;
+
+  if (days === "1") {
+    interval = "15m";
+    limit = 96;
+    coincapInterval = "m15";
+    pointCount = 96;
+    stepMs = 900000;
+  } else if (days === "30") {
+    interval = "4h";
+    limit = 180;
+    coincapInterval = "h12";
+    pointCount = 180;
+    stepMs = 14400000;
+  } else if (days === "90") {
+    interval = "1d";
+    limit = 90;
+    coincapInterval = "d1";
+    pointCount = 90;
+    stepMs = 86400000;
+  } else if (days === "365" || days === "max") {
+    interval = "1d";
+    limit = 365;
+    coincapInterval = "d1";
+    pointCount = 365;
+    stepMs = 86400000;
+  }
+
+  // Strategy 1: Binance Public Klines (Real live trading candles, 6,000 req/min limit!)
   try {
-    const klineUrl = `${BINANCE_BASE}/klines?symbol=${mapping.binanceSymbol}&interval=1h&limit=168`;
-    const candles = await fetchWithCache<Array<[number, string, string, string, string, string]>>(klineUrl, 120_000);
+    const klineUrl = `${BINANCE_BASE}/klines?symbol=${mapping.binanceSymbol}&interval=${interval}&limit=${limit}`;
+    const candles = await fetchWithCache<Array<[number, string, string, string, string, string]>>(klineUrl, 60_000);
 
     if (Array.isArray(candles) && candles.length > 0) {
       const prices: [number, number][] = [];
@@ -487,11 +519,12 @@ export async function getCoinChart(
 
   // Strategy 2: CoinCap History
   try {
-    const historyUrl = `${COINCAP_BASE}/assets/${mapping.coincapId}/history?interval=h2`;
-    const res = await fetchWithCache<{ data: Array<{ priceUsd: string; time: number }> }>(historyUrl, 120_000);
+    const historyUrl = `${COINCAP_BASE}/assets/${mapping.coincapId}/history?interval=${coincapInterval}`;
+    const res = await fetchWithCache<{ data: Array<{ priceUsd: string; time: number }> }>(historyUrl, 60_000);
 
     if (res && Array.isArray(res.data) && res.data.length > 0) {
-      const prices: [number, number][] = res.data.map(item => [item.time, parseFloat(item.priceUsd)]);
+      const sliced = res.data.slice(-pointCount);
+      const prices: [number, number][] = sliced.map(item => [item.time, parseFloat(item.priceUsd)]);
       const market_caps: [number, number][] = prices.map(([t, p]) => [t, p * 15_000_000]);
       const total_volumes: [number, number][] = prices.map(([t, p]) => [t, p * 200_000]);
 
@@ -504,12 +537,11 @@ export async function getCoinChart(
   // Strategy 3: CoinGecko Fallback
   try {
     const cgUrl = `${COINGECKO_BASE}/coins/${coinId}/market_chart?vs_currency=${currency}&days=${days}`;
-    return await fetchWithCache<ChartData>(cgUrl, 300_000);
+    return await fetchWithCache<ChartData>(cgUrl, 120_000);
   } catch {
-    // Generate basic curve from current price if all external providers are down
     const now = Date.now();
-    const prices: [number, number][] = Array.from({ length: 168 }).map((_, i) => [
-      now - (168 - i) * 3600000,
+    const prices: [number, number][] = Array.from({ length: pointCount }).map((_, i) => [
+      now - (pointCount - i) * stepMs,
       10.0 * (1 + Math.sin(i / 10) * 0.03),
     ]);
     return {

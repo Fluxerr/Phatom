@@ -12,6 +12,7 @@ import SendModal from "@/components/transactions/SendModal";
 import ReceiveModal from "@/components/transactions/ReceiveModal";
 import DepositModal from "@/components/transactions/DepositModal";
 import SwapModal from "@/components/transactions/SwapModal";
+import CryptoIcon from "@/components/CryptoIcon";
 import styles from "./wallet.module.css";
 
 export default function WalletPage() {
@@ -182,12 +183,12 @@ export default function WalletPage() {
                 onClick={() => router.push(`/wallet/${coin.id}`)}
                 style={{ animationDelay: `${index * 40}ms` }}
               >
-                <img
+                <CryptoIcon
                   src={coin.image}
-                  alt={coin.name}
+                  symbol={coin.symbol}
+                  name={coin.name}
+                  size={40}
                   className={styles.coinIcon}
-                  width={40}
-                  height={40}
                 />
                 <div className={styles.coinInfo}>
                   <span className={styles.coinName}>{coin.name}</span>

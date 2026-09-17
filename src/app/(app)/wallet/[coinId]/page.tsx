@@ -11,6 +11,7 @@ import SendModal from "@/components/transactions/SendModal";
 import ReceiveModal from "@/components/transactions/ReceiveModal";
 import DepositModal from "@/components/transactions/DepositModal";
 import SwapModal from "@/components/transactions/SwapModal";
+import CryptoIcon from "@/components/CryptoIcon";
 import styles from "./coinDetail.module.css";
 
 const TIME_RANGES = [
@@ -165,7 +166,7 @@ export default function CoinDetailPage({ params }: { params: Promise<{ coinId: s
           <ArrowLeft size={20} />
         </button>
         <div className={styles.topBarCenter}>
-          {coin && <img src={coin.image} alt={coin.name} width={24} height={24} style={{ borderRadius: "50%" }} />}
+          <CryptoIcon src={coin?.image} symbol={coinConfig?.symbol || coinId} name={coinConfig?.name || coinId} size={24} />
           <span className={styles.topBarTitle}>{coinConfig?.name || coinId}</span>
         </div>
         <div style={{ width: 36 }} />
